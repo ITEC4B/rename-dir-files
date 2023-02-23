@@ -185,13 +185,13 @@ find "$dir" -type f | {
     while read -r f_path
     do
         f_count=$((f_count +1))
-        printf %s\\n "f#$f_count"
+        #printf %s\\n "f#$f_count"
 
         f_datetime="$( LC_ALL=C ls -l --time-style='+%Y%m%d-%H%M%S' "$f_path" | cut -d' ' -f 6 )"
         #printf %s\\n "$f_datetime"
 
         f_path="$( LC_ALL=C ls -l --time-style='+%Y%m%d-%H%M%S' "$f_path" | cut -d' ' -f 7- | sed -e "$BRE_SED_RMV_TRAILING_SPACES" )"
-        printf %s\\n "SRC: $f_path"
+        #printf %s\\n "SRC: $f_path"
 
         f_dir="$( dirname "$f_path" )"
         #printf %s\\n "$f_dir"
@@ -204,29 +204,40 @@ find "$dir" -type f | {
         case $exec_mode in
             REAL) # Renaming Files (no empty spaces)
                 rename_to="${f_dir}/${f_newname}"
-                printf %s\\n "DST: $rename_to"
+                [ "$f_path" != "$rename_to" ] && {
+                    printf %s\\n "f#$f_count"
+                    printf %s\\n "SRC: $f_path"
+                    printf %s\\n "DST: $rename_to"
+                    rename_files "$f_path" "$rename_to"
+                    printf %s\\n
+                } || f_count_skipped=$((f_count_skipped +1))
 
-                [ "$f_path" != "$rename_to" ] && rename_files "$f_path" "$rename_to" \
-                                              || { printf %s\\n "[SKIPPED]"; f_count_skipped=$((f_count_skipped +1)); }
-                printf %s\\n
             ;;
 
             DATETIME)
                 printf %s "$f_newname" | grep "^$BRE_FILE_DATETIME_PREFIX_PATTERN" > /dev/null && {
-                    printf %s\\n\\n "File Not Renamed (FILE_DATETIME_PREFIX Detected: YYYYMMDD-hhmmss-)" 
+                    #printf %s\\n\\n "File Not Renamed (FILE_DATETIME_PREFIX Detected: YYYYMMDD-hhmmss-)"
+                    f_count_skipped=$((f_count_skipped +1))
                 } || {
                     rename_to="${f_dir}/${f_datetime}-${f_newname}"
-                    printf %s\\n "DST: $rename_to"
-
-                    [ "$f_path" != "$rename_to" ] && rename_files "$f_path" "$rename_to" \
-                                                  || { printf %s\\n "[SKIPPED]"; f_count_skipped=$((f_count_skipped +1)); }
-                    printf %s\\n
+                    [ "$f_path" != "$rename_to" ] && {
+                        printf %s\\n "f#$f_count"
+                        printf %s\\n "SRC: $f_path"
+                        printf %s\\n "DST: $rename_to"
+                        rename_files "$f_path" "$rename_to"
+                        printf %s\\n
+                    } || f_count_skipped=$((f_count_skipped +1))
                 }
             ;;
 
             TEST|*)
                 rename_to="${f_dir}/${f_newname}"
-                printf %s\\n\\n "DST: $rename_to"
+                [ "$f_path" != "$rename_to" ] && {
+                    printf %s\\n "f#$f_count"
+                    printf %s\\n "SRC: $f_path"
+                    printf %s\\n "DST: $rename_to"
+                    printf %s\\n\\n
+                } || f_count_skipped=$((f_count_skipped +1))
             ;;
         esac
     done
